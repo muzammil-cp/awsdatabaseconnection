@@ -2,7 +2,7 @@ import os
 import sys
 import boto3
 from botocore.exceptions import ClientError
-
+# muzammil cp
 # Read the region from environment variables (defaults to eu-north-1 to match your console)
 AWS_REGION = os.environ.get("AWS_DEFAULT_REGION", "eu-north-1")
 
