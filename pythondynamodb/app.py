@@ -1,8 +1,9 @@
 import os
 import sys
+import time
 
 import boto3
-from botocore.exceptions import ClientError, WaiterError
+from botocore.exceptions import ClientError
 
 AWS_REGION = os.environ.get("AWS_DEFAULT_REGION", "eu-north-1")
 TABLE_NAME = os.environ.get("DYNAMODB_TABLE", "dynamodb")
@@ -10,7 +11,7 @@ dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 
 
 def setup_table():
-    """Create the demo table if needed and wait until it is ready."""
+    """Create the demo table if needed and wait until it is active."""
     table = dynamodb.Table(TABLE_NAME)
     try:
         dynamodb.create_table(
@@ -19,17 +20,30 @@ def setup_table():
             AttributeDefinitions=[{"AttributeName": "id", "AttributeType": "N"}],
             ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
         )
-        print(f"Creating DynamoDB table {TABLE_NAME!r} in {AWS_REGION}; waiting for it to become active.")
+        print(f"Creating DynamoDB table {TABLE_NAME!r} in {AWS_REGION}.")
     except ClientError as error:
         if error.response.get("Error", {}).get("Code") != "ResourceInUseException":
             print(f"Could not create DynamoDB table: {error}", file=sys.stderr)
             sys.exit(1)
         print(f"DynamoDB table {TABLE_NAME!r} already exists; waiting until it is active.")
 
+    deadline = time.monotonic() + 300
     try:
-        table.wait_until_exists()
-        print(f"DynamoDB table {TABLE_NAME!r} is active in {AWS_REGION}.")
-    except WaiterError as error:
+        while True:
+            try:
+                table.reload()
+            except ClientError as error:
+                if error.response.get("Error", {}).get("Code") != "ResourceNotFoundException":
+                    raise
+            else:
+                if table.table_status == "ACTIVE":
+                    print(f"DynamoDB table {TABLE_NAME!r} is active in {AWS_REGION}.")
+                    return
+
+            if time.monotonic() >= deadline:
+                raise TimeoutError(f"DynamoDB table {TABLE_NAME!r} did not become active within 5 minutes.")
+            time.sleep(2)
+    except (ClientError, TimeoutError) as error:
         print(f"Could not wait for DynamoDB table: {error}", file=sys.stderr)
         sys.exit(1)
 
