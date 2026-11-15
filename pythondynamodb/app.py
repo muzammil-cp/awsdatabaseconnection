@@ -2,7 +2,7 @@ import os
 import sys
 
 import boto3
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, WaiterError
 
 AWS_REGION = os.environ.get("AWS_DEFAULT_REGION", "eu-north-1")
 TABLE_NAME = os.environ.get("DYNAMODB_TABLE", "dynamodb")
@@ -29,7 +29,7 @@ def setup_table():
     try:
         table.wait_until_exists()
         print(f"DynamoDB table {TABLE_NAME!r} is active in {AWS_REGION}.")
-    except ClientError as error:
+    except WaiterError as error:
         print(f"Could not wait for DynamoDB table: {error}", file=sys.stderr)
         sys.exit(1)
 
