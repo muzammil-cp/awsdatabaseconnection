@@ -1,2 +1,5 @@
-# Ignore local docker mysql data
+# Ignore local Docker MySQL data and local secrets
 mysql_data/
+.env
+.env.*
+!.env.example
