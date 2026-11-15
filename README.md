@@ -11,7 +11,8 @@ This repository contains two separate demos:
 From the repository root, set a local password and start both containers. In PowerShell:
 
 ```powershell
-$env:MYSQL_ROOT_PASSWORD = Read-Host "Choose a local MySQL password"
+$securePassword = Read-Host "Choose a local MySQL password" -AsSecureString
+$env:MYSQL_ROOT_PASSWORD = [System.Net.NetworkCredential]::new("", $securePassword).Password
 docker compose -f mysqldatabase/docker-compose.yml up --build
 ```
 
@@ -20,11 +21,11 @@ Compose builds the app from `databasedemo/`, waits for MySQL to accept connectio
 Create an item and list items:
 
 ```powershell
-curl.exe -X POST http://localhost:8080/api/items -H "Content-Type: application/json" -d "{\"name\":\"Demo item\"}"
+curl.exe -X POST http://localhost:8080/api/items -H "Content-Type: application/json" -d '{ "name": "Demo item" }'
 curl.exe http://localhost:8080/api/items
 ```
 
-Stop the containers with `docker compose -f mysqldatabase/docker-compose.yml down`. The named volume keeps local database data.
+Stop the containers with `docker compose -f mysqldatabase/docker-compose.yml down`. The named volume keeps local database data. Then clear the password from your PowerShell session with `Remove-Item Env:MYSQL_ROOT_PASSWORD`.
 
 ## Connect the app to Amazon RDS for MySQL
 
